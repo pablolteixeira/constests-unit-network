@@ -1,0 +1,106 @@
+<main class="main">
+    <section class="lk-section">
+        <div class="lk-container">
+            <% @token = Asset.where(symbol: params[:token_symbol]).first %>
+            <%= render "token/menu" %>
+
+            <div class="lk-content-body">
+
+                
+                <% if params[:token_symbol] == nil or params[:token_symbol] == "" %>
+                    <% @contests =  Contest.page(params[:page]).per(20) %>
+                <%else%>
+                    <% @contests =  Contest.where(:prize_token_symbol=>params[:token_symbol].upcase).page(params[:page]).per(20) %>
+                <%end%>
+                
+                <div class="board" style="display: block" id="contests">
+                    <div class="board__wrap">
+                        <div class="board__head">
+                            <ul class="tabs__nav js-tabs-nav" style="width:100%;">
+                                <a href="?#contests">
+                                    <li class="tabs__btn active">
+                                        <h6>Contests</h6>
+                                    </li>
+                                </a>
+                                <% if params[:id] == nil %>
+                                <a href="/contests/new?token_symbol=<%= params[:token_symbol] %>">
+                                    <li class="tabs__btn">
+                                        <h6>New Contest</h6>
+                                    </li>
+                                </a>
+                                <%end%>
+                            </ul>
+                        </div>
+                        <div class="board__body" style="min-height: 100px">
+
+
+                            <form class="form-search js-form-search" action="">
+                                <div class="form-search__wrap">
+                                    <input class="form-search__input" autofocus type="search" name="token_symbol" id="token_symbol" placeholder="Search" value="<%= params[:token_symbol] %>">
+                                    <button class="form-search__btn" type="submit">
+                                        <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="6" cy="6" r="5" stroke="#42427D" stroke-width="2"></circle>
+                                            <path d="M9 10L12.5 13.5" stroke="#42427D" stroke-width="2" stroke-linecap="round"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </form>
+
+                            <br>
+
+
+                            <div class="table table_history">
+                                <div class="table__wrap">
+                                    <div class="table__scroll">
+                                        <div class="table__head">
+                                            <div class="table__row">
+                                                <div class="table__col" style="width: 60%"><span class="member-style">Title</span></div>
+                                                <div class="table__col" style="width: 40%"><span class="member-style">Prize</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="table__body">
+                                            <% if @contests.size == 0 %>
+                                            <div class="table__row">
+                                                <label class="upload-form__label" style="padding-top: 10px;padding-left: 10px;color: black!important">
+                                                    No Contests Yet
+                                                </label>
+                                            </div>
+                                            <%else%>
+                                            <% @contests.each do |contest| %>
+                                            <div class="table__row">
+                                                <div class="table__col" style="width: 60%"><span class="member-style">
+                                                        <a href="/contests/<%= contest["id"] %>" style="text-decoration: none;">
+                                                            <%= contest["title"] %>
+                                                           
+                                                            </a></span>
+                                                </div>
+                                                <div class="table__col" style="width: 40%"><span class="member-style">
+                                                    <%= contest["prize_token_amount"] %> <%= contest["prize_token_symbol"] %> 🏆
+
+                                                    <% if false %>
+                                                        <% @user = User.find(contest["user_id"]) %>
+                                                        <a href="/user/<%= @user.username %>"><%= @user.username %></a>
+                                                        <% if   @user.ac_avatar.attached? %>
+                                                            <%= image_tag @user.ac_avatar.variant(resize: "150x150^", crop: '150x150+0+0') ,   :style => "width: 50px; border-radius: 30px; "   %>
+                                                        <% else %>
+                                                            <span class="fa fa-user  " style="width: 32px; border-radius: 30px;margin-left: 5px;"></span>
+                                                        <% end %>
+                                                    <% end %>
+                                                        
+                                                </span></div>
+                                            </div>
+                                            <%end%>
+                                            <%end%>
+                                        </div>
+                                    </div>
+                                  
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+</main>

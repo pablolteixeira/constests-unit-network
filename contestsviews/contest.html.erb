@@ -1,0 +1,366 @@
+<!-- indiv contest page /contest/1-->
+<main class="main">
+    <section class="lk-section">
+        <div class="lk-container">
+            <div class="lk-content-body">
+                <div class="board" style="display: block">
+                    <div class="board__wrap">
+                       
+                       <% @contest = Contest.find(params[:id]) %>
+
+
+                        <div class="board__head">
+                            <h5 class="board__name">Contest- <%= @contest.title %></h5>
+
+
+                             <% if   @contest.user_id  == session[:user_id] %>
+                                <a href="/contests/<%= @contest.id %>/edit" class="btn primary">Edit Contest</a>
+                            <%end%>
+
+                             <a href="/token/<%= @contest.token_symbol %>/community" class="btn primary"> 
+                                Back to Token
+                            </a>
+                        </div>
+                        <div class="board__body" style="min-height: 100px">
+                           
+
+                            <h2>Description:<br>
+                                <%= @contest.description %>
+                            </h2><br>
+
+                                
+                            <h2>Total Prize:<br>
+                                <%= @contest.prize_token_amount %>
+                                <a href="/token/<%= @contest.prize_token_symbol %>/community">
+                                <%= @contest.prize_token_symbol %>
+                                </a>
+                            </h2><br>
+                            <h2>Winners:<br>
+
+                                <% @winners = ContestEntries.where(:contest_id=>params[:id],:winner=>"TRUE") %><%= @winners.size %> /
+                                <%= @contest.prize_token_winners %>
+                            </h2><br>
+
+                            <h2>Creator:<br>
+                            <a href="/user/<%= User.find(@contest.user_id).username %>">
+                                <%= User.find(@contest.user_id).username %>
+                            </a>
+                            </h2><br>
+
+                            <h2>Status:<br>
+                               <%= @contest.statcode %>
+                            </h2>
+
+                            <br>
+
+                            <% if @contest.contest_end_date != nil %>
+                            <h2>Contest End Date:<br>
+                                <%= @contest.contest_end_date.to_formatted_s(:long) %>  
+
+                                <% if Time.now < @contest["contest_end_date"] %>
+                                (
+                                <%= time_ago_in_words(@contest.contest_end_date) %> time)
+                                <%end%>                             
+                            <br>
+                            <%end%> 
+
+                        </div>
+                    </div>
+                </div>
+
+
+               
+
+                <br>
+                <br>
+                <br>
+               
+
+
+                <div class="board" style="display: block">
+                    <div class="board__wrap">
+                        <div class="board__head">
+                            <h5 class="board__name">Enter Contest by submitting a link to proof of completion</h5>
+                        </div>
+                        <div class="board__body" style="min-height: 100px">
+
+                            <% if params[:contest_entry] == "not_url" %>
+                                <h2> Please enter a valid URL </h2>
+                                <br><br><br>
+                            <%end%>
+
+
+                            <% if   @contest.user_id  == session[:user_id] and    @contest.statcode  == "CLOSED" and  @contestentries == @winners %>
+                                <%= form_tag({:action => 'reward_contest_winners'}) do %>
+                                    <%= hidden_field_tag :token_symbol ,  params[:token_symbol]   %>
+                                    <%= hidden_field_tag :contest_id ,  @contest.id  %>
+                                    <%= hidden_field_tag :prize_token_winners ,  @contest.prize_token_winners  %>
+                                    <%= hidden_field_tag :prize_token_amount ,  @contest.prize_token_amount  %>
+                                    <%= hidden_field_tag :contest_title ,  @contest.title  %>
+                                    <%= button_tag(type: "submit", class: "btn primary") do %>
+                                        <span class="fas fa-award fa-1x" aria-hidden="true"></span>
+                                     <% end %>
+                                <% end %>
+                            <% else %>
+                                <% if @contest.statcode  == "COMPLETE" %>
+                                    <i class="fas fa-award fa-2x" aria-hidden="true"></i><i class="fas fa-trophy fa-1x" aria-hidden="true"></i><i class="fas fa-award fa-1x" aria-hidden="true"></i>
+                                <% end %>
+                            <% end %>
+ 
+                            <%= form_with :url => url_for(:action => 'create_contest_entry', :controller => 'contests'), :html => {:class => "upload-form upload-form_registr",   :multipart => true },  :method => 'post',:disable_with => 'loading...' do |f| %>
+                            <input class="form-control" type="hidden" value="false" name="winner" id="winner" />
+                            <input class="form-control" type="hidden" value="<%= params[:id] %>" name="contest_id" id="contest_id" />
+                            <input class="form-control" type="hidden" value="<%= params[:token_symbol] %>" name="token_symbol" id="token_symbol" />
+                            <div class="upload-form__row">
+                                <div class="upload-form__block " style="width: 100%">
+                                    <div class="upload-form__field">
+                                        <!-- <label class="upload-form__label" for="to"> Link to submission</label><br /> -->
+                                        <input class="upload-form__input" type="text"  name="submission_url" id="submission_url" value="<%= params[:submission_url] %>" placeholder=" ">
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn primary" style="width: 100%" type="submit">SUBMIT</button>
+                             
+                            <%end%>
+                        </div>
+                    </div>
+                </div>
+
+
+                <% @winners = ContestEntries.where(:contest_id=>params[:id],:winner=>"TRUE") %>
+
+
+                <div class="board" style="display: block">
+                    <div class="board__wrap">
+                        <div class="board__head">
+                            <h5 class="board__name"><%= @winners.size %> Winners</h5>
+                        </div>
+                        <div class="board__body" >
+
+                            <% if @winners.size == 0 %>
+                            <h2>No Winners yet</h2>
+                            <%end%>
+
+
+
+                            <% @winners.each do |entry| %>
+                                
+                            <h2>
+                                <%= entry.submission_url.gsub(/\n/, '<br/>').gsub(URI.regexp, '<a target="_blank" href="\0">\0</a>').html_safe %> <br>
+
+                                By: <a href="/user/<%= User.find(entry.user_id).username %>"> <%= User.find(entry.user_id).username %></a>
+
+                               <br>
+                               <br>
+
+                           </h2>
+
+                           <%end%>
+
+                        </div>
+                    </div>
+                </div>
+
+
+
+
+                <% @entries = ContestEntries.where(:contest_id=>params[:id],:winner=>"FALSE") %>
+
+
+                <div class="board" style="display: block">
+                    <div class="board__wrap">
+                        <div class="board__head">
+                            <h5 class="board__name"><%= @entries.size %> Submissions</h5>
+                        </div>
+                        <div class="board__body" style="min-height: 100px">
+                            <%= @contestentries %>
+                            <% if @entries.size == 0 %>
+                            <h2>No Submissions yet</h2>
+                            <%end%>
+
+
+                            <%     @prize_per_winner = @contest.prize_token_amount/@contest.prize_token_winners %>
+ 
+
+                            <% @entries.each do |entry| %>
+                                
+
+                                <h2>
+                                    <%= entry.submission_url.gsub(/\n/, '<br/>').gsub(URI.regexp, '<a target="_blank" href="\0">\0</a>').html_safe %> <br>
+
+                                By: <a href="/user/<%= User.find(entry.user_id).username %>"> <%= User.find(entry.user_id).username %></a>
+                            </h2>
+
+                               <br>
+                               <br>
+
+                                <% if   @contest.user_id  == session[:user_id] and @winners.size < @contest.prize_token_winners %>
+                                    
+
+                                    <%= form_tag({:action => 'assign_contest_winner',:entry_id=>entry.id}) do %>
+                                        <%= button_tag(type: "submit", class: "btn primary") do %>
+                                            Award <%=  @prize_per_winner %> <%= @contest.prize_token_symbol %>
+                                            <!-- <span class="fa fa-vote-yea fa-2x" aria-hidden="true"></span> -->
+                                        <% end %>
+                                    <% end %>
+
+                                <%end%>
+
+                                <br><br><br>
+
+                              
+
+                            <%end%>
+
+                        </div>
+                    </div>
+                </div>               
+            </div>
+        </div>
+    </section>
+</main>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<% if false %>
+
+
+
+     <% if  @myentry != nil %>
+                            <%if  @myentry["user_id"]  == entry.user_id %>
+                            my entry
+                            <% end %>
+                            <% end %>
+                            <% if entry.winner %>
+                            <% if   @contest.user_id  == session[:user_id] and    @contest.statcode  == "CLOSED"   %>
+                            <%= form_tag({:action => 'cancel_contest_winner'}) do %>
+                            <%= hidden_field_tag :token_symbol ,  params[:token_symbol]   %>
+                            <%= hidden_field_tag :entry_id ,  entry.id  %>
+                            <%= hidden_field_tag :contest_id ,  @contest.id  %>
+                            <%= button_tag(type: "submit", class: "btn primary") do %>
+                            <span class="fas fa-award fa-1x" aria-hidden="true"></span>
+                            <% end %>
+                            <% end %>
+                            <% else %>
+                            <span class="fas fa-award fa-1x" aria-hidden="true"></span>
+                            <% end %>
+                            <% else %>
+                           
+                            <% end %>
+                            <%end%><br>
+                            <!--   <h2>
+                            Balance:<br>
+                            <%= params[:token_symbol] %> <%= number_with_delimiter(  '%.2f' % (@user_token_balance.to_f ))  %>
+                            </h2> -->
+
+
+
+                            <% if false %>
+                            <div class="table__col" style="width: 10%"><span class="member-style">
+                                    <%= contest["entries"] %> </span></div>
+                            <div class="table__col" style="width: 20%">
+                                <span class="member-style">
+                                    <% if ((contest["statcode"] == "" or contest["statcode"] == "") and   contest["user_id"].to_i == session[:user_id].to_i) %>
+                                    <% if (contest["prize_token_amount"].to_f<@user_token_balance.to_f) %>
+                                    <%= form_tag({:action => 'transfertopot'}) do %>
+                                    <%= hidden_field_tag :contest_title ,  contest["title"]   %>
+                                    <%= hidden_field_tag :contest_id ,  contest["id"]  %>
+                                    <%= hidden_field_tag :token_symbol ,  params[:token_symbol] %>
+                                    <%= hidden_field_tag :prize_token_amount ,  contest["prize_token_amount"] %>
+                                    <%= button_tag(type: "submit", class: "btn primary") do %>
+                                    <span class="fas fa-cart-plus fa-1x"></span>
+                                    <% end %>
+                                    <% end %>
+                                    <% else %>
+                                    <a class="btn btn-success" href="/token/<%= @token.symbol %>/sale">Top-up
+                                        <%= @token.symbol %></a>
+                                    <% end %>
+                                    <% end %>
+                                    <% if contest["statcode"] == "OPEN"  and   contest["user_id"].to_i == session[:user_id].to_i and false%>
+                                    <%= form_tag({:action => 'close_contest'}) do %>
+                                    <%= hidden_field_tag :contest_title ,  contest["title"]   %>
+                                    <%= hidden_field_tag :contest_id ,  contest["id"]  %>
+                                    <%= hidden_field_tag :token_symbol ,  params[:token_symbol] %>
+                                    <%= hidden_field_tag :prize_token_amount ,  contest["prize_token_amount"] %>
+                                    <%= button_tag(type: "submit", class: "btn primary" ) do %>
+                                    <i class="fas fa-lock-open fa-1x"></i>
+                                    <% end %>
+                                    <% end %>
+                                    <% end %>
+                                    <% if contest["statcode"] == "CLOSED" and   contest["user_id"].to_i == session[:user_id].to_i and false %>a
+                                    <%= form_tag({:action => 'open_contest'}) do %>
+                                    <%= hidden_field_tag :contest_title ,  contest["title"]   %>
+                                    <%= hidden_field_tag :contest_id ,  contest["id"]  %>
+                                    <%= hidden_field_tag :token_symbol ,  params[:token_symbol] %>
+                                    <%= hidden_field_tag :prize_token_amount ,  contest["prize_token_amount"] %>
+                                    <%= button_tag(type: "submit", class: "btn primary") do %>
+                                    <i class="fas fa-lock fa-1x"></i>
+                                    <% end %>
+                                    <% end %>
+                                    <% end %>
+                                </span>
+                            </div>
+                            <%end%>
+

@@ -1,0 +1,106 @@
+<!-- create new contest /contest/new -->
+<main class="main">
+    <section class="lk-section">
+        <div class="lk-container">
+                <div class="board" style="display: block">
+                    <div class="board__wrap">
+                        <div class="board__head">
+                            <ul class="tabs__nav js-tabs-nav" style="width:100%;">
+                                <li class="tabs__btn active">
+                                    <h6>Edit Contest</h6>
+                                </li>
+                            </ul>
+
+                            <a href="/contests/<%= params[:id] %>" class="btn primary"> 
+                                Back to Contest
+                            </a>
+
+                        </div>
+                        <div class="board__body" style="min-height: 100px">
+
+
+
+                            <% @contest = Contest.find(params[:id]) %>
+                            
+
+                             <%= form_with :url => url_for(:action => 'update_contest', :controller => 'contests',:contest_id=>params[:id]), :html => {:class => "upload-form upload-form_registr",   :multipart => true },  :method => 'post',:disable_with => 'loading...' do |f| %>
+                            <input type="hidden" name="token_symbol" value="<%= params[:token_symbol] %>">
+                            
+                            <div class="upload-form__row">
+                                <div class="upload-form__block upload-form__block_big" style="width: 100%">
+                                    <div class="upload-form__field">
+                                        <label class="upload-form__label" for="to">Title</label><br />
+                                        <input class="upload-form__input" type="text" value="<%= @contest.title %>" name="contest_title" id="contest_title" placeholder=" ">
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="upload-form__row">
+                                <div class="upload-form__block upload-form__block_big" style="width: 100%">
+                                    <div class="upload-form__field">
+                                        <label class="upload-form__label" for="to">Description</label><br />
+                                        <textarea class="upload-form__input" type="text"  name="contest_description" id="contest_description" placeholder=" "><%= @contest.description %></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="upload-form__row">
+                                <div class="upload-form__block upload-form__block_big" style="width: 100%">
+                                    <div class="upload-form__field">
+                                        <label class="upload-form__label" for="to">Contest Ends</label><br />
+                                        <input class="upload-form__input" type="datetime-local" placeholder="" name="contest_ends" id="contest_ends" value="<%if @contest.contest_end_date != nil %><%= @contest.contest_end_date.to_time.iso8601[0...-6] %><%end%>">
+                                    </div>
+                                </div>
+                            </div>
+
+                        
+                            <div class="upload-form__row">
+                                <div class="upload-form__field-btn" style="width:100%;margin-top: 20px;margin-bottom: 20px;">
+                                    <button class="btn primary" type="submit" data-disable-with='Processing..'>
+                                        Update Contest
+                                    </button>
+                                </div>
+                            </div>
+                            <%end%>
+
+
+
+
+                            <% @winners = ContestEntries.where(:contest_id=>params[:id],:winner=>"TRUE") %>
+                            <% @entries = ContestEntries.where(:contest_id=>params[:id],:winner=>"FALSE") %>
+
+
+                            <% if  @winners.size == 0 and @entries.size == 0 %>
+                                <%= form_with :url => url_for(:action => 'close_contest', :controller => 'contests',:contest_id=>params[:id]), :html => {:class => "upload-form upload-form_registr",   :multipart => true },  :method => 'post',:disable_with => 'loading...' do |f| %>
+
+                                <div class="upload-form__row">
+                                    <div class="upload-form__field-btn" style="width:100%;margin-top: 20px;margin-bottom: 20px;">
+                                        <button class="btn primary" type="submit" data-disable-with='Processing..'>
+                                            Close Contest
+                                        </button>
+                                    </div>
+                                </div>
+                                <%end%>
+                            <%end%>
+
+
+
+
+
+
+
+                        </div>
+                    </div>
+                </div>
+
+
+
+
+              
+                
+
+        </div>
+    </section>
+</main>

@@ -1,0 +1,75 @@
+<!-- Contest tab for token page-->
+<% @contests =  Contest.where(:prize_token_symbol=>params[:token_symbol]).page(params[:page]).per(3) %>
+<div class="board" style="display: block" id="contests">
+    <div class="board__wrap">
+        <div class="board__head">
+            <ul class="tabs__nav js-tabs-nav" style="width:100%;">
+                <a href="?#contests">
+                    <li class="tabs__btn active">
+                        <h6>Contests</h6>
+                    </li>
+                </a>
+                <% if params[:id] == nil %>
+                <a href="/contests/new?token_symbol=<%= params[:token_symbol] %>">
+                    <li class="tabs__btn">
+                        <h6>New Contest</h6>
+                    </li>
+                </a>
+                <%end%>
+            </ul>
+        </div>
+        <div class="board__body" style="min-height: 100px">
+            <div class="table table_history">
+                <div class="table__wrap">
+                    <div class="table__scroll">
+                        <div class="table__head">
+                            <div class="table__row">
+                                <div class="table__col" style="width: 60%"><span class="member-style">Title</span></div>
+                                <div class="table__col" style="width: 40%"><span class="member-style">Prize</span></div>
+                            </div>
+                        </div>
+                        <div class="table__body">
+                            <% if @contests.size == 0 %>
+                            <div class="table__row">
+                                <label class="upload-form__label" style="padding-top: 10px;padding-left: 10px;color: black!important">
+                                    No Contests Yet
+                                </label>
+                            </div>
+                            <%else%>
+                            <% @contests.each do |contest| %>
+                            <div class="table__row">
+                                <div class="table__col" style="width: 60%"><span class="member-style">
+                                        <a href="/contests/<%= contest["id"] %>" style="text-decoration: none;">
+                                            <%= contest["title"] %>
+                                           
+                                            </a></span>
+                                </div>
+                                <div class="table__col" style="width: 40%"><span class="member-style">
+                                    <%= contest["prize_token_amount"] %> <%= contest["prize_token_symbol"] %> 🏆
+
+                                    <% if false %>
+                                        <% @user = User.find(contest["user_id"]) %>
+                                        <a href="/user/<%= @user.username %>"><%= @user.username %></a>
+                                        <% if   @user.ac_avatar.attached? %>
+                                            <%= image_tag @user.ac_avatar.variant(resize: "150x150^", crop: '150x150+0+0') ,   :style => "width: 50px; border-radius: 30px; "   %>
+                                        <% else %>
+                                            <span class="fa fa-user  " style="width: 32px; border-radius: 30px;margin-left: 5px;"></span>
+                                        <% end %>
+                                    <% end %>
+                                        
+                                </span></div>
+                            </div>
+                            <%end%>
+                            <%end%>
+                        </div>
+                    </div>
+                    <a href="/contests?token_symbol=<%= params[:token_symbol] %>"  style="width: 100%!important">
+                        <button class="btn" type="submit" data-disable-with='Processing..' style="width: 100%!important">
+                            View Contests
+                        </button>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

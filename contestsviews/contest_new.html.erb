@@ -1,0 +1,110 @@
+<!-- create new contest /contest/new -->
+<main class="main">
+    <section class="lk-section">
+        <div class="lk-container">
+                <div class="board" style="display: block">
+                    <div class="board__wrap">
+                        <div class="board__head">
+                            <ul class="tabs__nav js-tabs-nav" style="width:100%;">
+                                <li class="tabs__btn active">
+                                    <h6>New Contest</h6>
+                                </li>
+                            </ul>
+
+                             <a href="/token/<%= params[:token_symbol] %>/community" class="btn primary"> 
+                                Back to Token
+                            </a>
+                        </div>
+                        <div class="board__body" style="min-height: 100px">
+
+
+                            <% if params[:error] == "user_token_balance" %>
+                                <h3>You don't have enough <%= params[:token_symbol] %> to make a contest</h3>
+                            <% elsif params[:error] == "prize_token_winners" %>
+                                <h3>Please add number of winners</h3>
+                            <% elsif params[:error] == "prize_token_amount" %>
+                                <h3>Please add prize total</h3>
+                            <%end%>
+
+
+
+                            <%= form_with :url => url_for(:action => 'create_contest', :controller => 'contests'), :html => {:class => "upload-form upload-form_registr",   :multipart => true },  :method => 'post',:disable_with => 'loading...' do |f| %>
+                            <input type="hidden" name="token_symbol" value="<%= params[:token_symbol] %>">
+                            <div class="upload-form__row">
+                                <div class="upload-form__block upload-form__block_big" style="width: 100%">
+                                    <div class="upload-form__field">
+                                        <label class="upload-form__label" for="to">Title</label><br />
+                                        <input class="upload-form__input" type="text" value="" name="contest_title" id="contest_title" placeholder=" ">
+                                    </div>
+                                </div>
+                            </div>
+                            <table style="width: 100%">
+                                <tr>
+                                    <td>
+                                        <div class="upload-form__row">
+                                            <div class="upload-form__block upload-form__block_big" style="width: 100%">
+                                                <div class="upload-form__field">
+                                                    <label class="upload-form__label" for="to">Total Prize (<%= params[:token_symbol] %>)</label><br />
+                                                    <input class="upload-form__input" type="number" value="" name="prize_token_amount" id="prize_token_amount" placeholder=" ">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="upload-form__row">
+                                            <div class="upload-form__block upload-form__block_big" style="width: 100%">
+                                                <div class="upload-form__field">
+                                                    <label class="upload-form__label" for="to">How many winners?</label><br />
+                                                    <input class="upload-form__input" type="number" value="" name="prize_token_winners" id="prize_token_winners" placeholder=" ">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                            <h2 >Each winner will receive <span id="each_winner"> 0 </span> <%= params[:token_symbol] %> </h2>
+                                    </td>
+                                </tr>
+                                <script>
+                                               
+                                                $("#prize_token_amount").on("input", function() {
+                                                    // var usdu_after_fees = parseFloat(0.98 * $(this).val())
+                                                    // var token_after = <%= @power %> / (<%= @current_pool_usdu_balance.to_f %> + usdu_after_fees)
+                                                    // var token_receive_amount = (<%= @current_pool_token_balance.to_f %> - token_after)
+                                                    $('#each_winner').html($("#prize_token_amount").val()/$("#prize_token_winners").val());
+                                                    // var price = ($(this).val() / token_receive_amount)
+                                                    // $('#price_change').html(price.toFixed(2));
+
+
+                                                });
+
+                                                $("#prize_token_winners").on("input", function() {
+                                                     
+                                                      $('#each_winner').html($("#prize_token_amount").val()/$("#prize_token_winners").val());
+
+                                                });
+                                </script>
+                            </table>
+                            <div class="upload-form__row">
+                                <div class="upload-form__field-btn" style="width:100%;margin-top: 20px;margin-bottom: 20px;">
+                                    <button class="btn primary" type="submit" data-disable-with='Processing..'>
+                                        Create Contest
+                                    </button>
+                                </div>
+                            </div>
+                            <%end%>
+
+                            <div class="upload-form__row">
+                                <div class="upload-form__field" style="margin-top:-20px;">
+                                    <span>Balance:
+                                        <%= number_with_delimiter(  '%.2f' % (@user_token_balance.to_f ))  %>
+                                        <%= params[:token_symbol] %></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+    </section>
+</main>

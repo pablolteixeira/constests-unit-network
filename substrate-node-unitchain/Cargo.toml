@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "node",
+     "pallets/assetbalances",
+     "pallets/blogchain",
+     "pallets/collectibles",
+     "pallets/dex",
+     "pallets/oracle",
+     "pallets/papers",
+     "pallets/polls",
+     "pallets/profile",
+     "pallets/questions",
+     "pallets/ranks",
+     "pallets/rewards",
+     "pallets/stores",
+    "pallets/teams_advisors",
+    "runtime",
+]
+[profile.release]
+panic = "unwind"
