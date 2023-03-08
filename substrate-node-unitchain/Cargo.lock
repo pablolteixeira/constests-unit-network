@@ -4403,6 +4403,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-contests"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+]
+
+[[package]]
 name = "pallet-dex"
 version = "4.0.0-dev"
 dependencies = [
