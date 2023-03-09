@@ -6,6 +6,11 @@ pub use pallet::*;
 mod tests;
 
 use frame_support::{
+	sp_runtime::FixedPointOperand,
+	PalletId,
+	traits::tokens::{
+		Balance,
+		fungibles::{Transfer, Inspect}},
 	pallet_prelude::*};
 
 use frame_system::pallet_prelude::*;
@@ -25,6 +30,12 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>; 
 
+		type Assets: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::AssetBalance>
+					+ Transfer<Self::AccountId>;
+
+		type AssetBalance: Balance
+					+ FixedPointOperand;
+
 		type AssetId: Member 
 					+ Parameter 
 					+ Copy 
@@ -33,24 +44,49 @@ pub mod pallet {
 					+ Default;
 
 		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+
+		#[pallet::constant]
 		type MaxTitleLength: Get<u32>;
+
+		#[pallet::constant]
+		type MinTitleLength: Get<u32>;
 
 		#[pallet::constant]
 		type MaxTokenSymbolLength: Get<u32>;
 
+		#[pallet::constant]
+		type MinTokenSymbolLength: Get<u32>;
+
+		#[pallet::constant]
+		type MaxContestEndDateLength: Get<u32>;
+
+		#[pallet::constant]
+		type MinContestEndDateLength: Get<u32>;
+
+		#[pallet::constant]
+		type MaxDescriptionLength: Get<u32>;
+
+		#[pallet::constant]
+		type MinDescriptionLength: Get<u32>;
+
+		#[pallet::constant]
+		type MinTokenWinner: Get<u32>;
     }
 
-	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
+	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, MaxEncodedLen, TypeInfo)]
+	#[scale_info(skip_type_params(T))]
 	pub struct Contests<T: Config> {
-		title: Vec<u8>,
+		contest_id: u32,
+		title: BoundedVec<u8, T::MaxTitleLength>,
 		user_address: T::AccountId,
 		prize_token_id: AssetIdOf<T>,
 		prize_token_winner: u32,
-		token_symbol: Vec<u8>,
+		token_symbol: BoundedVec<u8, T::MaxTokenSymbolLength>,
 		// statcode states -> true: open; false: closed.
 		statcode: bool,
-		contest_end_date: Vec<u8>,
-		description: Vec<u8>
+		contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength>,
+		description: BoundedVec<u8, T::MaxDescriptionLength>
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
@@ -61,9 +97,27 @@ pub mod pallet {
 		winner_transfer_id: u32
 	}
 
-	#[pallet::event]
-	pub enum Event<T> {
+	#[pallet::storage]
+	#[pallet::getter(fn get_contests)]
+	pub type ContestsMap<T> = StorageMap<_, Blake2_128Concat, u32, Contests<T>>; 
 
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		ContestCreted { who: T::AccountId }
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		ContestIdAlreadyInUse,
+		AssetDontExist,
+		TitleTooLarge,
+		TitleTooSmall,
+		TokenSymbolTooLarge,
+		TokenSymbolTooSmall,
+		DescriptionTooLarge,
+		DescriptionTooSmall,
+		PrizeTokenWinnerTooSmall,
 	}
 
 	#[pallet::call]
@@ -72,20 +126,43 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight(0)]
 		pub fn contest_new(
-			origin: OriginFor<T>
+			origin: OriginFor<T>,
+			contest_id: u32,
+			title: BoundedVec<u8, T::MaxTitleLength>,
+			prize_token_id: AssetIdOf<T>,
+			prize_token_winner: u32,
+			token_symbol: BoundedVec<u8, T::MaxTokenSymbolLength>,
+			contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength>,
+			description: BoundedVec<u8, T::MaxDescriptionLength>
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			Ok(())
-		}
+			Self::validate_contest_new(
+				contest_id.clone(),
+				title.clone(),
+				prize_token_id.clone(),
+				prize_token_winner.clone(),
+				token_symbol.clone(),
+				contest_end_date.clone(),
+				description.clone()
+			);
 
-		#[pallet::call_index(1)]
-		#[pallet::weight(0)]
-		pub fn create_contest(
-			origin: OriginFor<T>
-		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
+			let contest = Contests::<T> {
+				contest_id: contest_id.clone(),
+				title: title.clone(),
+				user_address: who.clone(),
+				prize_token_id: prize_token_id.clone(),
+				prize_token_winner: prize_token_winner.clone(),
+				token_symbol: token_symbol.clone(),
+				statcode: true,
+				contest_end_date: contest_end_date.clone(),
+				description: description.clone()
+			};
 			
+			ContestsMap::<T>::insert(contest_id, contest);
+
+			Self::deposit_event(Event::<T>::ContestCreted { who } );
+
 			Ok(())
 		}
 
@@ -128,5 +205,28 @@ pub mod pallet {
 
 			Ok(())
 		}
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	fn validate_contest_new(
+		contest_id: u32,
+		title: BoundedVec<u8, T::MaxTitleLength>,
+		prize_token_id: AssetIdOf<T>,
+		prize_token_winner: u32,
+		token_symbol: BoundedVec<u8, T::MaxTokenSymbolLength>,
+		contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength>,
+		description: BoundedVec<u8, T::MaxDescriptionLength>
+	) -> DispatchResult {
+
+		ensure!(ContestsMap::<T>::contains_key(contest_id.clone()), Error::<T>::ContestIdAlreadyInUse);
+		ensure!(T::Assets::asset_exists(prize_token_id.clone()), Error::<T>::AssetDontExist);
+		ensure!(prize_token_winner < T::MinTokenWinner, Error::<T>::PrizeTokenWinnerTooSmall);
+		ensure!(title.len() > T::MinTitleLength, Error::<T>::TitleTooSmall);
+		ensure!(token_symbol.len() > T::MinTokenSymbolLength, Error::<T>::TokenSymbolTooSmall);
+		ensure!(description.len() > T::MinDescriptionLength, Error::<T>::DescriptionTooSmall);
+		// Need to finish the contest_end_date validation yet
+
+		Ok(())
 	}
 }
