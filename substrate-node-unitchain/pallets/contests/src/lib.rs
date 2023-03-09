@@ -2,18 +2,69 @@
 
 pub use pallet::*;
 
+#[cfg(test)]
+mod tests;
+
+use frame_support::{
+	pallet_prelude::*};
+
+use frame_system::pallet_prelude::*;
+
+
 #[frame_support::pallet]
 pub mod pallet {
-    use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
+	use super::*;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
+	pub type AssetIdOf<T> = <T as Config>::AssetId;
+
     #[pallet::config]
     pub trait Config: frame_system::Config {
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>; 
+
+		type AssetId: Member 
+					+ Parameter 
+					+ Copy 
+					+ MaybeSerializeDeserialize 
+					+ MaxEncodedLen
+					+ Default;
+
+		#[pallet::constant]
+		type MaxTitleLength: Get<u32>;
+
+		#[pallet::constant]
+		type MaxTokenSymbolLength: Get<u32>;
+
     }
+
+	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
+	pub struct Contests<T: Config> {
+		title: Vec<u8>,
+		user_address: T::AccountId,
+		prize_token_id: AssetIdOf<T>,
+		prize_token_winner: u32,
+		token_symbol: Vec<u8>,
+		// statcode states -> true: open; false: closed.
+		statcode: bool,
+		contest_end_date: Vec<u8>,
+		description: Vec<u8>
+	}
+
+	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
+	pub struct ContestsEntries<T: Config> {
+		user_address: T::AccountId,
+		contest_id: u32,
+		winner: bool,
+		winner_transfer_id: u32
+	}
+
+	#[pallet::event]
+	pub enum Event<T> {
+
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
