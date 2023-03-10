@@ -1,7 +1,7 @@
-Contests
+## Contests
 
 
-The asset pallet is available for reference to assets/tokens
+### The asset pallet is available for reference to assets/tokens
 
 For a particular asset id (i.e. token)
 A user may call method to enter details for a new contest for a specific token
@@ -12,7 +12,7 @@ Contest creator can assign an entry as a winner and issue the reward
 Contest can be closed
 
 
-1. Files attached 
+#### 1. Files attached 
 a) contestdata.rb - data schema 
 b) contests_controller.rb - code to migrate to pallet
 c) contestscreens - screen shots for reference
@@ -22,17 +22,17 @@ e) substrate-node-unitchain - includes some frame pallets (eg assets pallet)
 f) basictemplate - taken from substrate frame for reference
 
 
-2. Methods in controller to be handled in pallet : 
+#### 2. Methods in controller to be handled in pallet : 
 
-# module methods
-# contest_new
-# create_contest
-# update_contest
-# create_contest_entry
-# assign_contest_winner
-# close_contest
+- module methods
+- contest_new
+- create_contest
+- update_contest
+- create_contest_entry
+- assign_contest_winner
+- close_contest
 
-# supplementary methods - these are methods to be accessed from the asset balances pallet 
-# dcxgetindivtokenbalance
-# check_and_update_user_balance
-# dcxupdatefeaturebalance
+#### supplementary methods - these are methods to be accessed from the asset balances pallet 
+- dcxgetindivtokenbalance
+- check_and_update_user_balance
+- dcxupdatefeaturebalance
