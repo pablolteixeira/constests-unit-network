@@ -96,8 +96,9 @@ pub mod pallet {
 		pub description: BoundedVec<u8, T::MaxDescriptionLength>
 	}
 
-	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
-	pub struct ContestsEntries<T: Config> {
+	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, MaxEncodedLen, TypeInfo)]
+	#[scale_info(skip_type_params(T))]
+	pub struct ContestEntry<T: Config> {
 		pub user_address: T::AccountId,
 		pub contest_id: u32,
 		pub entry_id: u32,
@@ -106,7 +107,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_contests)]
+	// contest_id -> Contest
 	pub type ContestsMap<T> = StorageMap<_, Blake2_128Concat, u32, Contests<T>>; 
+
+	#[pallet::storage]
+	#[pallet::getter(fn ger_entries)]
+	// contest_id -> entry_id -> ContestEntry
+	pub type EntriesMap<T> = StorageDoubleMap<_, Blake2_128Concat, u32, Blake2_128Concat, u32, ContestEntry<T>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -114,12 +121,15 @@ pub mod pallet {
 		ContestCreted { who: T::AccountId, contest_id: u32, title: BoundedVec<u8, T::MaxTitleLength> },
 		ContestUpdated { who: T::AccountId, contest_id: u32, title: BoundedVec<u8, T::MaxTitleLength>, 
 				description: BoundedVec<u8, T::MaxDescriptionLength>, contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength> },
+		EntryCreated { who: T::AccountId, contest_id: u32, entry_id: u32 },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		ContestIdAlreadyInUse,
 		ContestIdDontExist,
+		EntryIdAlreadyExist,
+		EntryIdDontExist,
 		AssetDontExist,
 		TitleTooSmall,
 		TokenSymbolTooSmall,
@@ -223,9 +233,27 @@ pub mod pallet {
 		#[pallet::call_index(3)]
 		#[pallet::weight(0)]
 		pub fn create_contest_entry(
-			origin: OriginFor<T>
+			origin: OriginFor<T>,
+			contest_id: u32,
+			entry_id: u32
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+
+			Self::validate_create_contest_entry(
+				contest_id.clone(),
+				entry_id.clone()
+			)?;
+
+			let entry_contest = ContestEntry::<T> {
+				user_address: who.clone(),
+				contest_id: contest_id.clone(),
+				entry_id: entry_id.clone(),
+				winner: false
+			};
+
+			EntriesMap::<T>::insert(contest_id.clone(), entry_id.clone(), entry_contest);
+
+			Self::deposit_event(Event::<T>::EntryCreated { who, contest_id, entry_id });
 
 			Ok(())
 		}
@@ -297,6 +325,17 @@ impl<T: Config> Pallet<T> {
 		ensure!(contest.user_address == who, Error::<T>::OnlyOwnerCanChange);
 
 		// Need to finish the contest_end_date verification.
+
+		Ok(())
+	}
+
+	fn validate_create_contest_entry(
+		contest_id: u32,
+		entry_id: u32
+	) -> DispatchResult {
+
+		ensure!(ContestsMap::<T>::contains_key(contest_id.clone()), Error::<T>::ContestIdDontExist);
+		ensure!(!EntriesMap::<T>::contains_key(contest_id, entry_id), Error::<T>::EntryIdAlreadyExist);		
 
 		Ok(())
 	}
