@@ -4,12 +4,12 @@
 ### The asset pallet is available for reference to assets/tokens
 
 For a particular asset id (i.e. token)
-A user may call method to enter details for a new contest for a specific token
-A user may create a contest with the prize value being a number of tokens
-Contest details may be updated by the creator - inc contest end time
-Any user may submit a contest entry
-Contest creator can assign an entry as a winner and issue the reward 
-Contest can be closed
+- A user may call method to enter details for a new contest for a specific token
+- A user may create a contest with the prize value being a number of tokens
+- Contest details may be updated by the creator - inc contest end time
+- Any user may submit a contest entry
+- Contest creator can assign an entry as a winner and issue the reward 
+- Contest can be closed
 
 
 #### 1. Files attached 
