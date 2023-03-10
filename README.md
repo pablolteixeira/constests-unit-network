@@ -36,4 +36,3 @@ f) basictemplate - taken from substrate frame for reference
 # dcxgetindivtokenbalance
 # check_and_update_user_balance
 # dcxupdatefeaturebalance
-
