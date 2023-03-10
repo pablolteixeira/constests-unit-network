@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#[cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
 
@@ -7,12 +7,19 @@ mod tests;
 
 use frame_support::{
 	sp_runtime::{
-		traits::AccountIdConversion, 
+		traits::{
+			AccountIdConversion,
+			CheckedDiv,
+			CheckedSub
+		}, 
 		FixedPointOperand},
 	PalletId,
 	traits::tokens::{
 		Balance,
-		fungibles::{Transfer, Inspect}},
+		fungibles::{
+			Transfer, 
+			Inspect
+		}},
 	pallet_prelude::*};
 
 use frame_system::pallet_prelude::*;
@@ -83,11 +90,12 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
-	pub struct Contests<T: Config> {
+	pub struct Contest<T: Config> {
 		pub contest_id: u32,
 		pub title: BoundedVec<u8, T::MaxTitleLength>,
 		pub user_address: T::AccountId,
 		pub prize_token_id: AssetIdOf<T>,
+		pub prize_token_amount: AssetBalanceOf<T>,
 		pub prize_token_winner: u32,
 		pub token_symbol: BoundedVec<u8, T::MaxTokenSymbolLength>,
 		// statcode states -> true: open; false: closed.
@@ -108,12 +116,12 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_contests)]
 	// contest_id -> Contest
-	pub type ContestsMap<T> = StorageMap<_, Blake2_128Concat, u32, Contests<T>>; 
+	pub type ContestsMap<T> = StorageMap<_, Blake2_128Concat, u32, Contest<T>>; 
 
 	#[pallet::storage]
 	#[pallet::getter(fn ger_entries)]
-	// contest_id -> entry_id -> ContestEntry
-	pub type EntriesMap<T> = StorageDoubleMap<_, Blake2_128Concat, u32, Blake2_128Concat, u32, ContestEntry<T>>;
+	// entry_id -> ContestEntry
+	pub type EntriesMap<T> = StorageMap<_, Blake2_128Concat, u32, ContestEntry<T>>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -122,12 +130,14 @@ pub mod pallet {
 		ContestUpdated { who: T::AccountId, contest_id: u32, title: BoundedVec<u8, T::MaxTitleLength>, 
 				description: BoundedVec<u8, T::MaxDescriptionLength>, contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength> },
 		EntryCreated { who: T::AccountId, contest_id: u32, entry_id: u32 },
+		ContestWinnerAssigned { contest_id: u32 ,winner: T::AccountId, prize: AssetBalanceOf<T> }
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		ContestIdAlreadyInUse,
 		ContestIdDontExist,
+		ContestAlreadyClosed,
 		EntryIdAlreadyExist,
 		EntryIdDontExist,
 		AssetDontExist,
@@ -137,7 +147,9 @@ pub mod pallet {
 		PrizeTokenWinnerTooSmall,
 		AssetBalanceInsufficient,
 		TokenAmountTooSmall,
-		OnlyOwnerCanChange
+		OnlyOwnerCanChange,
+		OnlyOwnerCanAssignContestWinner,
+		DivisionError
 	}
 
 	#[pallet::call]
@@ -170,11 +182,12 @@ pub mod pallet {
 				description.clone()
 			)?;
 
-			let contest = Contests::<T> {
+			let contest = Contest::<T> {
 				contest_id: contest_id.clone(),
 				title: title.clone(),
 				user_address: who.clone(),
 				prize_token_id: prize_token_id.clone(),
+				prize_token_amount: prize_token_amount.clone(),
 				prize_token_winner: prize_token_winner.clone(),
 				token_symbol: token_symbol.clone(),
 				statcode: true,
@@ -251,7 +264,7 @@ pub mod pallet {
 				winner: false
 			};
 
-			EntriesMap::<T>::insert(contest_id.clone(), entry_id.clone(), entry_contest);
+			EntriesMap::<T>::insert(entry_id.clone(), entry_contest);
 
 			Self::deposit_event(Event::<T>::EntryCreated { who, contest_id, entry_id });
 
@@ -261,9 +274,45 @@ pub mod pallet {
 		#[pallet::call_index(4)]
 		#[pallet::weight(0)]
 		pub fn assign_contest_winner(
-			origin: OriginFor<T>
+			origin: OriginFor<T>,
+			entry_id: u32
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+
+			let mut contest = Self::validate_assign_contest_winner(
+				who.clone(),
+				entry_id.clone()
+			)?;
+
+			let prize = match contest.prize_token_amount.checked_div(&contest.prize_token_winner.into()) {
+					Some(value) => Ok(value),
+					None => Err(Error::<T>::DivisionError)
+			}?;
+
+			let mut contest_entry = EntriesMap::<T>::get(entry_id).unwrap();
+
+			T::Assets::transfer(
+				contest.prize_token_id, 
+				&T::PalletId::get().into_account_truncating(), 
+				&contest_entry.user_address,
+				prize,
+				false	
+			)?;
+
+			contest.prize_token_winner = contest.prize_token_winner.checked_sub(1).unwrap_or(0); 
+			contest_entry.winner = true;
+
+			if contest.prize_token_winner == 0 {
+				contest.statcode = false;
+			}
+
+			let contest_id = contest_entry.contest_id.clone();
+			let winner = contest_entry.user_address.clone();
+
+			ContestsMap::<T>::insert(contest.contest_id, contest);
+			EntriesMap::<T>::insert(entry_id, contest_entry);
+
+			Self::deposit_event(Event::<T>::ContestWinnerAssigned { contest_id ,winner, prize });
 
 			Ok(())
 		}
@@ -334,9 +383,30 @@ impl<T: Config> Pallet<T> {
 		entry_id: u32
 	) -> DispatchResult {
 
-		ensure!(ContestsMap::<T>::contains_key(contest_id.clone()), Error::<T>::ContestIdDontExist);
-		ensure!(!EntriesMap::<T>::contains_key(contest_id, entry_id), Error::<T>::EntryIdAlreadyExist);		
+		ensure!(!EntriesMap::<T>::contains_key(entry_id), Error::<T>::EntryIdAlreadyExist);		
+		ensure!(ContestsMap::<T>::contains_key(contest_id), Error::<T>::ContestIdDontExist);
 
 		Ok(())
 	}
+
+	fn validate_assign_contest_winner(
+		who: T::AccountId,
+		entry_id: u32
+	) -> Result<Contest<T>, DispatchError> {
+
+		ensure!(EntriesMap::<T>::contains_key(entry_id.clone()), Error::<T>::EntryIdDontExist);
+
+		// Unwrap used because there is a ensure! above testing that the element exist with contest_id key 
+		let contest_entry = EntriesMap::<T>::get(entry_id).unwrap();
+
+		ensure!(ContestsMap::<T>::contains_key(contest_entry.contest_id), Error::<T>::ContestIdDontExist);
+		
+		// Unwrap used because there is a ensure! above testing that the element exist with contest_id key 
+		let contest = ContestsMap::get(contest_entry.contest_id).unwrap();
+		
+		ensure!(contest.statcode, Error::<T>::ContestAlreadyClosed);
+		ensure!(who == contest.user_address, Error::<T>::OnlyOwnerCanAssignContestWinner);
+		
+		Ok(contest)
+	} 
 }
