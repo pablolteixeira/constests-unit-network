@@ -117,16 +117,14 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		ContestIdAlreadyInUse,
+		ContestIdDontExist,
 		AssetDontExist,
-		TitleTooLarge,
 		TitleTooSmall,
-		TokenSymbolTooLarge,
 		TokenSymbolTooSmall,
-		DescriptionTooLarge,
 		DescriptionTooSmall,
 		PrizeTokenWinnerTooSmall,
 		AssetBalanceInsufficient,
-		TokenAmountTooSmall
+		TokenAmountTooSmall,
 	}
 
 	#[pallet::call]
@@ -191,11 +189,13 @@ pub mod pallet {
 		pub fn update_contest(
 			origin: OriginFor<T>,
 			contest_id: u32,
-
+			title: BoundedVec<u8, T::MaxTitleLength>,
+			description: BoundedVec<u8, T::MaxDescriptionLength>,
+			contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength>
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-
+			
 			
 			Ok(())
 		}
@@ -245,17 +245,31 @@ impl<T: Config> Pallet<T> {
 		description: BoundedVec<u8, T::MaxDescriptionLength>
 	) -> DispatchResult {
 
-		ensure!(ContestsMap::<T>::contains_key(contest_id.clone()), Error::<T>::ContestIdAlreadyInUse);
+		ensure!(!ContestsMap::<T>::contains_key(contest_id), Error::<T>::ContestIdAlreadyInUse);
 		ensure!(T::Assets::asset_exists(prize_token_id.clone()), Error::<T>::AssetDontExist);
-		ensure!(prize_token_winner < T::MinTokenWinner::get(), Error::<T>::PrizeTokenWinnerTooSmall);
-		ensure!(title.len() as u32> T::MinTitleLength::get(), Error::<T>::TitleTooSmall);
-		ensure!(token_symbol.len() as u32 > T::MinTokenSymbolLength::get(), Error::<T>::TokenSymbolTooSmall);
-		ensure!(description.len() as u32 > T::MinDescriptionLength::get(), Error::<T>::DescriptionTooSmall);
-		ensure!(prize_token_amount < T::MinTokenAmount::get().into(), Error::<T>::TokenAmountTooSmall);
+		ensure!(prize_token_winner >= T::MinTokenWinner::get(), Error::<T>::PrizeTokenWinnerTooSmall);
+		ensure!(title.len() as u32 >= T::MinTitleLength::get(), Error::<T>::TitleTooSmall);
+		ensure!(token_symbol.len() as u32 >= T::MinTokenSymbolLength::get(), Error::<T>::TokenSymbolTooSmall);
+		ensure!(description.len() as u32 >= T::MinDescriptionLength::get(), Error::<T>::DescriptionTooSmall);
+		ensure!(prize_token_amount >= T::MinTokenAmount::get().into(), Error::<T>::TokenAmountTooSmall);
 		ensure!(T::Assets::balance(prize_token_id, &who) >= T::MinTokenAmount::get().into(), Error::<T>::AssetBalanceInsufficient);
 		
 		// Need to finish the contest_end_date validation yet
 
 		Ok(())
+	}
+
+	fn validate_update_contest(
+		contest_id: u32,
+		title: BoundedVec<u8, T::MaxTitleLength>,
+		description: BoundedVec<u8, T::MaxDescriptionLength>,
+		contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength>		
+	) -> DispatchResult {
+
+		ensure!(ContestsMap::<T>::contains_key(contest_id), Error::<T>::ContestIdDontExist);
+		ensure!(title.len() as u32 >= T::MinTitleLength::get(), Error::<T>::TitleTooSmall);
+		ensure!(description.len() as u32 >= T::MinDescriptionLength::get(), Error::<T>::DescriptionTooSmall);
+
+		// Need to finish the contest_end_date verification.
 	}
 }
