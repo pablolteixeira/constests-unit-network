@@ -84,24 +84,24 @@ pub mod pallet {
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Contests<T: Config> {
-		contest_id: u32,
-		title: BoundedVec<u8, T::MaxTitleLength>,
-		user_address: T::AccountId,
-		prize_token_id: AssetIdOf<T>,
-		prize_token_winner: u32,
-		token_symbol: BoundedVec<u8, T::MaxTokenSymbolLength>,
+		pub contest_id: u32,
+		pub title: BoundedVec<u8, T::MaxTitleLength>,
+		pub user_address: T::AccountId,
+		pub prize_token_id: AssetIdOf<T>,
+		pub prize_token_winner: u32,
+		pub token_symbol: BoundedVec<u8, T::MaxTokenSymbolLength>,
 		// statcode states -> true: open; false: closed.
-		statcode: bool,
-		contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength>,
-		description: BoundedVec<u8, T::MaxDescriptionLength>
+		pub statcode: bool,
+		pub contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength>,
+		pub description: BoundedVec<u8, T::MaxDescriptionLength>
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
 	pub struct ContestsEntries<T: Config> {
-		user_address: T::AccountId,
-		contest_id: u32,
-		winner: bool,
-		winner_transfer_id: u32
+		pub user_address: T::AccountId,
+		pub contest_id: u32,
+		pub entry_id: u32,
+		pub winner: bool,
 	}
 
 	#[pallet::storage]
@@ -111,7 +111,9 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		ContestCreted { who: T::AccountId, contest_id: u32, title: BoundedVec<u8, T::MaxTitleLength> }
+		ContestCreted { who: T::AccountId, contest_id: u32, title: BoundedVec<u8, T::MaxTitleLength> },
+		ContestUpdated { who: T::AccountId, contest_id: u32, title: BoundedVec<u8, T::MaxTitleLength>, 
+				description: BoundedVec<u8, T::MaxDescriptionLength>, contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength> },
 	}
 
 	#[pallet::error]
@@ -125,6 +127,7 @@ pub mod pallet {
 		PrizeTokenWinnerTooSmall,
 		AssetBalanceInsufficient,
 		TokenAmountTooSmall,
+		OnlyOwnerCanChange
 	}
 
 	#[pallet::call]
@@ -195,8 +198,25 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
+			Self::validate_update_contest(
+				who.clone(),
+				contest_id.clone(),
+				title.clone(),
+				description.clone(),
+				contest_end_date.clone()
+			)?;
 			
-			
+			// Unwrap used because there is a function "validate_update_contest" above testing that the element exist with contest_id key 
+			let mut contest = ContestsMap::<T>::get(contest_id.clone()).unwrap();
+
+			contest.title = title.clone();
+			contest.description = description.clone();
+			contest.contest_end_date = contest_end_date.clone();
+
+			ContestsMap::<T>::insert(contest_id, contest);
+
+			Self::deposit_event(Event::<T>::ContestUpdated { who, contest_id, title, description, contest_end_date });
+
 			Ok(())
 		}
 
@@ -260,16 +280,24 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn validate_update_contest(
+		who: T::AccountId,
 		contest_id: u32,
 		title: BoundedVec<u8, T::MaxTitleLength>,
 		description: BoundedVec<u8, T::MaxDescriptionLength>,
 		contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength>		
 	) -> DispatchResult {
 
-		ensure!(ContestsMap::<T>::contains_key(contest_id), Error::<T>::ContestIdDontExist);
+		ensure!(ContestsMap::<T>::contains_key(contest_id.clone()), Error::<T>::ContestIdDontExist);
 		ensure!(title.len() as u32 >= T::MinTitleLength::get(), Error::<T>::TitleTooSmall);
 		ensure!(description.len() as u32 >= T::MinDescriptionLength::get(), Error::<T>::DescriptionTooSmall);
 
+		// Unwrap used because there is a ensure! above testing that the element exist with contest_id key 
+		let contest = ContestsMap::<T>::get(contest_id.clone()).unwrap();
+
+		ensure!(contest.user_address == who, Error::<T>::OnlyOwnerCanChange);
+
 		// Need to finish the contest_end_date verification.
+
+		Ok(())
 	}
 }
