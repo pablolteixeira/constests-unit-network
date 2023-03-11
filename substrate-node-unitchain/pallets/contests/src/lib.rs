@@ -8,6 +8,7 @@ mod tests;
 use frame_support::{
 	sp_runtime::{
 		traits::{
+			Zero,
 			AccountIdConversion,
 			CheckedDiv,
 			CheckedSub
@@ -130,7 +131,8 @@ pub mod pallet {
 		ContestUpdated { who: T::AccountId, contest_id: u32, title: BoundedVec<u8, T::MaxTitleLength>, 
 				description: BoundedVec<u8, T::MaxDescriptionLength>, contest_end_date: BoundedVec<u8, T::MaxContestEndDateLength> },
 		EntryCreated { who: T::AccountId, contest_id: u32, entry_id: u32 },
-		ContestWinnerAssigned { contest_id: u32 ,winner: T::AccountId, prize: AssetBalanceOf<T> }
+		ContestWinnerAssigned { contest_id: u32, winner: T::AccountId, prize: AssetBalanceOf<T> },
+		ContestClosed { who: T::AccountId, contest_id: u32 },
 	}
 
 	#[pallet::error]
@@ -149,6 +151,7 @@ pub mod pallet {
 		TokenAmountTooSmall,
 		OnlyOwnerCanChange,
 		OnlyOwnerCanAssignContestWinner,
+		OnlyOwnerCanCloseContest,
 		DivisionError
 	}
 
@@ -295,11 +298,12 @@ pub mod pallet {
 				contest.prize_token_id, 
 				&T::PalletId::get().into_account_truncating(), 
 				&contest_entry.user_address,
-				prize,
+				prize.clone(),
 				false	
 			)?;
 
-			contest.prize_token_winner = contest.prize_token_winner.checked_sub(1).unwrap_or(0); 
+			contest.prize_token_winner = contest.prize_token_winner.checked_sub(1).unwrap_or(0);
+			contest.prize_token_amount = contest.prize_token_amount.checked_sub(&prize).unwrap_or(AssetBalanceOf::<T>::zero());
 			contest_entry.winner = true;
 
 			if contest.prize_token_winner == 0 {
@@ -320,9 +324,32 @@ pub mod pallet {
 		#[pallet::call_index(5)]
 		#[pallet::weight(0)]
 		pub fn close_contract(
-			origin: OriginFor<T>
+			origin: OriginFor<T>,
+			contest_id: u32
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+
+			let mut contest = Self::validate_close_contract(
+				who.clone(),
+				contest_id.clone()
+			)?;
+
+			T::Assets::transfer(
+				contest.prize_token_id.clone(),
+				&T::PalletId::get().into_account_truncating(),
+				&who,
+				contest.prize_token_amount.clone(),
+				false
+			)?;
+
+			contest.statcode = false;
+			contest.prize_token_amount = AssetBalanceOf::<T>::zero();
+
+			let contest_id = contest.contest_id.clone();
+
+			ContestsMap::<T>::insert(contest_id.clone(), contest);
+
+			Self::deposit_event(Event::<T>::ContestClosed { who, contest_id });
 
 			Ok(())
 		}
@@ -409,4 +436,19 @@ impl<T: Config> Pallet<T> {
 		
 		Ok(contest)
 	} 
+
+	fn validate_close_contract(
+		who: T::AccountId,
+		contest_id: u32
+	) -> Result<Contest<T> ,DispatchError> {
+
+		ensure!(ContestsMap::<T>::contains_key(contest_id.clone()), Error::<T>::ContestIdDontExist);
+
+		let contest = ContestsMap::<T>::get(contest_id.clone()).unwrap();
+
+		ensure!(contest.statcode == true, Error::<T>::ContestAlreadyClosed);
+		ensure!(contest.user_address == who, Error::<T>::OnlyOwnerCanCloseContest);
+
+		Ok(contest)
+	}
 }
