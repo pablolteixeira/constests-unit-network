@@ -95,8 +95,35 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 }
 
+parameter_types! {
+    pub const MaxTitleLength: u32 = 50;
+    pub const MinTitleLength: u32 = 10;
+    pub const MaxTokenSymbolLength: u32 = 10;
+    pub const MinTokenSymbolLength: u32 = 3;
+    pub const MaxContestEndDateLength: u32 = 12;
+    pub const MinContestEndDateLength: u32 = 8;
+    pub const MaxDescriptionLength: u32 = 350;
+    pub const MinDescriptionLength: u32 = 100;
+    pub const MinTokenAmount: u32 = 10;
+    pub const MinTokenWinner: u32 = 1;
+}
+
 impl pallet_contests::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
+    type Assets = Assets;
+    type AssetBalance = u128;
+    type AssetId = u32;
+    type PalletId = PalletId;
+    type MaxTitleLength = MaxTitleLength;
+    type MinTitleLength = MinTitleLength;
+    type MaxTokenSymbolLength = MaxTokenSymbolLength;
+    type MinTokenSymbolLength = MinTokenSymbolLength;
+    type MaxContestEndDateLength = MaxContestEndDateLength;
+    type MinContestEndDateLength = MinContestEndDateLength;
+    type MaxDescriptionLength = MaxDescriptionLength;
+    type MinDescriptionLength = MinDescriptionLength;
+    type MinTokenAmount = MinTokenAmount;
+    type MinTokenWinner = MinTokenWinner;
 }
 
 // Build genesis storage according to the mock runtime.
