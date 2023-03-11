@@ -86,7 +86,7 @@ impl pallet_assets::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u64 = 1;
+	pub const ExistentialDeposit: u64 = 0;
 	pub const MaxLocks: u32 = 100;
 }
 impl pallet_balances::Config for Test {
@@ -133,7 +133,27 @@ impl pallet_contests::Config for Test {
     type MinTokenWinner = MinTokenWinner;
 }
 
+pub const ALICE: u64 = 0;
+pub const BOB: u64 = 1;
+pub const CHARLIE: u64 = 2;
+pub const DAVE: u64 = 3;
+
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	pallet_balances::GenesisConfig::<Test> {
+		balances: vec![
+			(ALICE, 1_000_000_000_000),
+			(BOB, 0),
+			(CHARLIE, 0),
+			(DAVE, 0)
+		]
+	}
+	.assimilate_storage(&mut storage)
+	.unwrap();
+
+	let mut test_ext: sp_io::TestExternalities = storage.into();
+	test_ext.execute_with(|| System::set_block_number(1));
+	test_ext
 }
