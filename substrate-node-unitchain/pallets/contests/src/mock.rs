@@ -1,5 +1,9 @@
 use crate as pallet_contests;
-use frame_support::traits::{ConstU16, ConstU64};
+use frame_support::{
+	parameter_types,
+	PalletId,
+	traits::{AsEnsureOriginWithArg, ConstU16, ConstU32, ConstU64, ConstU128}};
+use frame_system::{EnsureSigned, EnsureRoot};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -8,6 +12,8 @@ use sp_runtime::{
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+type Balance = u128;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -41,7 +47,7 @@ impl frame_system::Config for Test {
 	type BlockHashCount = ConstU64<250>;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -96,7 +102,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-    pub const PalletId: [u8, 8] = b"unittask"
+    pub const ContestPalletId: PalletId = PalletId(*b"unittask");
     pub const MaxTitleLength: u32 = 50;
     pub const MinTitleLength: u32 = 10;
     pub const MaxTokenSymbolLength: u32 = 10;
@@ -114,7 +120,7 @@ impl pallet_contests::Config for Test {
     type Assets = Assets;
     type AssetBalance = u128;
     type AssetId = u32;
-    type PalletId = PalletId;
+    type PalletId = ContestPalletId;
     type MaxTitleLength = MaxTitleLength;
     type MinTitleLength = MinTitleLength;
     type MaxTokenSymbolLength = MaxTokenSymbolLength;
