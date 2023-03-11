@@ -96,6 +96,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+    pub const PalletId: [u8, 8] = b"unittask"
     pub const MaxTitleLength: u32 = 50;
     pub const MinTitleLength: u32 = 10;
     pub const MaxTokenSymbolLength: u32 = 10;
