@@ -110,7 +110,7 @@ parameter_types! {
     pub const MaxContestEndDateLength: u32 = 12;
     pub const MinContestEndDateLength: u32 = 8;
     pub const MaxDescriptionLength: u32 = 350;
-    pub const MinDescriptionLength: u32 = 100;
+    pub const MinDescriptionLength: u32 = 50;
     pub const MinTokenAmount: u32 = 10;
     pub const MinTokenWinner: u32 = 1;
 }

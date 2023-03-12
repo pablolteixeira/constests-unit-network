@@ -66,6 +66,7 @@ pub use pallet_rewards;
 pub use pallet_dex;
 pub use pallet_papers;
 pub use pallet_polls;
+pub use pallet_contests;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -480,6 +481,37 @@ impl pallet_polls::Config for Runtime {
 	type PalletsOrigin = OriginCaller;
 }
 
+parameter_types! {
+    pub const ContestPalletId: PalletId = PalletId(*b"unittask");
+    pub const MaxTitleLength: u32 = 50;
+    pub const MinTitleLength: u32 = 10;
+    pub const MaxTokenSymbolLength: u32 = 10;
+    pub const MinTokenSymbolLength: u32 = 3;
+    pub const MaxContestEndDateLength: u32 = 12;
+    pub const MinContestEndDateLength: u32 = 8;
+    pub const MaxDescriptionLength: u32 = 350;
+    pub const MinDescriptionLength: u32 = 50;
+    pub const MinTokenAmount: u32 = 10;
+    pub const MinTokenWinner: u32 = 1;
+}
+
+impl pallet_contests::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+    type Assets = Assets;
+    type AssetBalance = u128;
+    type AssetId = u32;
+    type PalletId = ContestPalletId;
+    type MaxTitleLength = MaxTitleLength;
+    type MinTitleLength = MinTitleLength;
+    type MaxTokenSymbolLength = MaxTokenSymbolLength;
+    type MinTokenSymbolLength = MinTokenSymbolLength;
+    type MaxContestEndDateLength = MaxContestEndDateLength;
+    type MinContestEndDateLength = MinContestEndDateLength;
+    type MaxDescriptionLength = MaxDescriptionLength;
+    type MinDescriptionLength = MinDescriptionLength;
+    type MinTokenAmount = MinTokenAmount;
+    type MinTokenWinner = MinTokenWinner;
+}
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -513,6 +545,7 @@ construct_runtime!(
 		Polls: pallet_polls,
 		Questions: pallet_questions,
 		Oracle: pallet_oracle,
+		Contests: pallet_contests
 	}
 );
 

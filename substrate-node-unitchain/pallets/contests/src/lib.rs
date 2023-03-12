@@ -1,4 +1,4 @@
-#[cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
 
@@ -216,7 +216,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(2)]
+		#[pallet::call_index(1)]
 		#[pallet::weight(0)]
 		pub fn update_contest(
 			origin: OriginFor<T>,
@@ -249,7 +249,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(3)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(0)]
 		pub fn create_contest_entry(
 			origin: OriginFor<T>,
@@ -277,7 +277,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(4)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(0)]
 		pub fn assign_contest_winner(
 			origin: OriginFor<T>,
@@ -324,7 +324,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(5)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(0)]
 		pub fn close_contract(
 			origin: OriginFor<T>,
@@ -378,7 +378,6 @@ impl<T: Config> Pallet<T> {
 		ensure!(title.len() as u32 >= T::MinTitleLength::get(), Error::<T>::TitleTooSmall);
 		ensure!(token_symbol.len() as u32 >= T::MinTokenSymbolLength::get(), Error::<T>::TokenSymbolTooSmall);
 		ensure!(description.len() as u32 >= T::MinDescriptionLength::get(), Error::<T>::DescriptionTooSmall);
-		ensure!(prize_token_amount >= T::MinTokenAmount::get().into(), Error::<T>::TokenAmountTooSmall);
 		ensure!(T::Assets::balance(prize_token_id, &who) >= T::MinTokenAmount::get().into(), Error::<T>::AssetBalanceInsufficient);
 		
 		// Need to finish the contest_end_date validation yet
