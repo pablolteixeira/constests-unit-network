@@ -8,6 +8,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+//#[cfg(feature = "std")]
+//use serde::{Deserialize, Serialize};
+
 use frame_support::{
 	sp_runtime::{
 		traits::{
@@ -22,7 +25,8 @@ use frame_support::{
 		Balance,
 		fungibles::{
 			Transfer, 
-			Inspect
+			Inspect,
+			Mutate
 		}},
 	pallet_prelude::*};
 
@@ -42,7 +46,8 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>; 
 
 		type Assets: Inspect<Self::AccountId, AssetId = Self::AssetId, Balance = Self::AssetBalance>
-					+ Transfer<Self::AccountId>;
+					+ Transfer<Self::AccountId>
+					+ Mutate<Self::AccountId>;
 
 		type AssetBalance: Balance
 					+ FixedPointOperand;
@@ -94,6 +99,7 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
+	//#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	pub struct Contest<T: Config> {
 		pub contest_id: u32,
 		pub title: BoundedVec<u8, T::MaxTitleLength>,
@@ -110,6 +116,7 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
+	//#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	pub struct ContestEntry<T: Config> {
 		pub user_address: T::AccountId,
 		pub contest_id: u32,
@@ -126,6 +133,34 @@ pub mod pallet {
 	#[pallet::getter(fn ger_entries)]
 	// entry_id -> ContestEntry
 	pub type EntriesMap<T> = StorageMap<_, Blake2_128Concat, u32, ContestEntry<T>>;
+
+	/*
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub contest_map: Vec<(u32, Contest<T>)>,
+		pub entries_map: Vec<(u32, ContestEntry<T>)>
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { contest_map: Default::default(), account_map: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			for (key, value) in &self.contest_map {
+				<ContestsMap<T>>::insert(key, value);
+			}
+
+			for (key, value) in &self.entries_map {
+				<EntriesMap<T>>::insert(key, value);
+			}
+		}
+	}
+	*/
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -200,11 +235,12 @@ pub mod pallet {
 				contest_end_date: contest_end_date.clone(),
 				description: description.clone()
 			};
-			
+
+
 			T::Assets::transfer(
 				prize_token_id, 
-				&who, 
-				&T::PalletId::get().into_account_truncating(),
+				&who,
+				&Self::account_id(), 
 				prize_token_amount,
 				false	
 			)?;
@@ -298,8 +334,8 @@ pub mod pallet {
 			let mut contest_entry = EntriesMap::<T>::get(entry_id).unwrap();
 
 			T::Assets::transfer(
-				contest.prize_token_id, 
-				&T::PalletId::get().into_account_truncating(), 
+				contest.prize_token_id,
+				&Self::account_id(),
 				&contest_entry.user_address,
 				prize.clone(),
 				false	
@@ -339,7 +375,7 @@ pub mod pallet {
 
 			T::Assets::transfer(
 				contest.prize_token_id.clone(),
-				&T::PalletId::get().into_account_truncating(),
+				&Self::account_id(),
 				&who,
 				contest.prize_token_amount.clone(),
 				false
@@ -360,6 +396,10 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	fn account_id() -> T::AccountId {
+		T::PalletId::get().into_account_truncating()
+	}
+
 	fn validate_contest_new(
 		who: T::AccountId,
 		contest_id: u32,
@@ -372,8 +412,8 @@ impl<T: Config> Pallet<T> {
 		description: BoundedVec<u8, T::MaxDescriptionLength>
 	) -> DispatchResult {
 
-		ensure!(!ContestsMap::<T>::contains_key(contest_id), Error::<T>::ContestIdAlreadyInUse);
 		ensure!(T::Assets::asset_exists(prize_token_id.clone()), Error::<T>::AssetDontExist);
+		ensure!(!ContestsMap::<T>::contains_key(contest_id), Error::<T>::ContestIdAlreadyInUse);
 		ensure!(prize_token_winner >= T::MinTokenWinner::get(), Error::<T>::PrizeTokenWinnerTooSmall);
 		ensure!(title.len() as u32 >= T::MinTitleLength::get(), Error::<T>::TitleTooSmall);
 		ensure!(token_symbol.len() as u32 >= T::MinTokenSymbolLength::get(), Error::<T>::TokenSymbolTooSmall);

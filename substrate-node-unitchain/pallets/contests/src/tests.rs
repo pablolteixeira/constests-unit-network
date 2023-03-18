@@ -50,6 +50,7 @@ use frame_support::{assert_noop, assert_ok, BoundedVec};
 	ensure!(contest.statcode == true, Error::<T>::ContestAlreadyClosed);
 	ensure!(contest.user_address == who, Error::<T>::OnlyOwnerCanCloseContest);
 */
+
 #[test]
 fn create_contest_asset_dont_exist() {
 	new_test_ext().execute_with(|| {
@@ -80,12 +81,9 @@ fn create_contest_token_winner_too_small() {
 		let contest_end_date: BoundedVec<u8, <Test as pallet::Config>::MaxContestEndDateLength> = BoundedVec::try_from("20/10/2023".as_bytes().to_vec()).unwrap();
 		let description: BoundedVec<u8, <Test as pallet::Config>::MaxDescriptionLength> = BoundedVec::try_from("Roseum tenerum flores prunorum in aura tepida veris saltantes.".as_bytes().to_vec()).unwrap();
 
-		assert_ok!(Assets::create(
-			RuntimeOrigin::signed(ALICE),
-			0.into(),
-			ALICE,
-			1
-		));
+		assert_ok!(Assets::create(RuntimeOrigin::signed(ALICE), 0.into(), ALICE, 1));
+
+		assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), 0.into(), ALICE, 1_000_000_000_000_000));
 
 		assert_noop!(Contests::contest_new(
 			RuntimeOrigin::signed(ALICE),
@@ -97,6 +95,7 @@ fn create_contest_token_winner_too_small() {
 			token_symbol,
 			contest_end_date,
 			description
-		), Error::<Test>::AssetDontExist);
+		), Error::<Test>::PrizeTokenWinnerTooSmall);
+		
 	});
 }
