@@ -15,6 +15,7 @@ use frame_support::{
 	sp_runtime::{
 		traits::{
 			Zero,
+			One,
 			AccountIdConversion,
 			CheckedDiv,
 			CheckedSub
@@ -57,7 +58,8 @@ pub mod pallet {
 					+ Copy 
 					+ MaybeSerializeDeserialize 
 					+ MaxEncodedLen
-					+ Default;
+					+ Default
+					+ Zero;
 
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -134,34 +136,23 @@ pub mod pallet {
 	// entry_id -> ContestEntry
 	pub type EntriesMap<T> = StorageMap<_, Blake2_128Concat, u32, ContestEntry<T>>;
 
-	/*
+
 	#[pallet::genesis_config]
-	pub struct GenesisConfig<T: Config> {
-		pub contest_map: Vec<(u32, Contest<T>)>,
-		pub entries_map: Vec<(u32, ContestEntry<T>)>
-	}
+	pub struct GenesisConfig;
 
 	#[cfg(feature = "std")]
-	impl<T: Config> Default for GenesisConfig<T> {
+	impl Default for GenesisConfig {
 		fn default() -> Self {
-			Self { contest_map: Default::default(), account_map: Default::default() }
+			Self{}
 		}
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
 		fn build(&self) {
-			for (key, value) in &self.contest_map {
-				<ContestsMap<T>>::insert(key, value);
-			}
-
-			for (key, value) in &self.entries_map {
-				<EntriesMap<T>>::insert(key, value);
-			}
 		}
 	}
-	*/
-
+	
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -237,12 +228,13 @@ pub mod pallet {
 			};
 
 
+			
 			T::Assets::transfer(
 				prize_token_id, 
 				&who,
 				&Self::account_id(), 
 				prize_token_amount,
-				false	
+				true	
 			)?;
 
 			ContestsMap::<T>::insert(contest_id, contest);
@@ -396,7 +388,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	fn account_id() -> T::AccountId {
+	pub fn account_id() -> T::AccountId {
 		T::PalletId::get().into_account_truncating()
 	}
 

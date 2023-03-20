@@ -51,51 +51,83 @@ use frame_support::{assert_noop, assert_ok, BoundedVec};
 	ensure!(contest.user_address == who, Error::<T>::OnlyOwnerCanCloseContest);
 */
 
-#[test]
-fn create_contest_asset_dont_exist() {
-	new_test_ext().execute_with(|| {
-		let title: BoundedVec<u8, <Test as pallet::Config>::MaxTitleLength> = BoundedVec::try_from("UNIT CONTEST".as_bytes().to_vec()).unwrap();
-		let token_symbol: BoundedVec<u8, <Test as pallet::Config>::MaxTokenSymbolLength> = BoundedVec::try_from("BTC".as_bytes().to_vec()).unwrap();
-		let contest_end_date: BoundedVec<u8, <Test as pallet::Config>::MaxContestEndDateLength> = BoundedVec::try_from("20/10/2023".as_bytes().to_vec()).unwrap();
-		let description: BoundedVec<u8, <Test as pallet::Config>::MaxDescriptionLength> = BoundedVec::try_from("Roseum tenerum flores prunorum in aura tepida veris saltantes.".as_bytes().to_vec()).unwrap();
+fn create_contest() {
+	let title: BoundedVec<u8, <Test as pallet::Config>::MaxTitleLength> = BoundedVec::try_from("UNIT CONTEST".as_bytes().to_vec()).unwrap();
+	let token_symbol: BoundedVec<u8, <Test as pallet::Config>::MaxTokenSymbolLength> = BoundedVec::try_from("UNIT".as_bytes().to_vec()).unwrap();
+	let contest_end_date: BoundedVec<u8, <Test as pallet::Config>::MaxContestEndDateLength> = BoundedVec::try_from("20/10/2023".as_bytes().to_vec()).unwrap();
+	let description: BoundedVec<u8, <Test as pallet::Config>::MaxDescriptionLength> = BoundedVec::try_from("Roseum tenerum flores prunorum in aura tepida veris saltantes.".as_bytes().to_vec()).unwrap();
 
-		assert_noop!(Contests::contest_new(
-			RuntimeOrigin::signed(ALICE),
-			0,
-			title,
-			0,
-			100,
-			2,
-			token_symbol,
-			contest_end_date,
-			description
-		), Error::<Test>::AssetDontExist);
+	assert_ok!(Assets::create(RuntimeOrigin::signed(ALICE), 0.into(), ALICE, 1));
+
+	assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), 0.into(), ALICE, 1_000_000_000_000_000));
+	assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), 0.into(), Contests::account_id(), 1_000_000_000_000_000));
+
+	assert_ok!(Contests::contest_new(
+		RuntimeOrigin::signed(ALICE),
+		0,
+		title,
+		0,
+		100,
+		2,
+		token_symbol,
+		contest_end_date,
+		description)
+	);
+}
+
+#[test]
+fn create_contest_sucessfull() {
+	new_test_ext().execute_with(|| {
+		create_contest();
+
+		System::assert_last_event(Event::ContestCreated { who: ALICE, contest_id: 0, title:  BoundedVec::try_from("UNIT CONTEST".as_bytes().to_vec()).unwrap()}.into())
 	});
 }
 
 #[test]
-fn create_contest_token_winner_too_small() {
+fn update_contest_sucessfull() {
 	new_test_ext().execute_with(|| {
-		let title: BoundedVec<u8, <Test as pallet::Config>::MaxTitleLength> = BoundedVec::try_from("UNIT CONTEST".as_bytes().to_vec()).unwrap();
-		let token_symbol: BoundedVec<u8, <Test as pallet::Config>::MaxTokenSymbolLength> = BoundedVec::try_from("BTC".as_bytes().to_vec()).unwrap();
-		let contest_end_date: BoundedVec<u8, <Test as pallet::Config>::MaxContestEndDateLength> = BoundedVec::try_from("20/10/2023".as_bytes().to_vec()).unwrap();
-		let description: BoundedVec<u8, <Test as pallet::Config>::MaxDescriptionLength> = BoundedVec::try_from("Roseum tenerum flores prunorum in aura tepida veris saltantes.".as_bytes().to_vec()).unwrap();
+		create_contest();
 
-		assert_ok!(Assets::create(RuntimeOrigin::signed(ALICE), 0.into(), ALICE, 1));
+		let title: BoundedVec<u8, <Test as pallet::Config>::MaxTitleLength> = BoundedVec::try_from("UNIT CONTEST UPDATED".as_bytes().to_vec()).unwrap();
+		let token_symbol: BoundedVec<u8, <Test as pallet::Config>::MaxTokenSymbolLength> = BoundedVec::try_from("UNIT UPDATED".as_bytes().to_vec()).unwrap();
+		let contest_end_date: BoundedVec<u8, <Test as pallet::Config>::MaxContestEndDateLength> = BoundedVec::try_from("20/10/2030".as_bytes().to_vec()).unwrap();
+		let description: BoundedVec<u8, <Test as pallet::Config>::MaxDescriptionLength> = BoundedVec::try_from("UPDATED UPDATED UPDATED UPDATED UPDATED UPDATED UPDATED UPDATED UPDATED UPDATED.".as_bytes().to_vec()).unwrap();
 
-		assert_ok!(Assets::mint(RuntimeOrigin::signed(ALICE), 0.into(), ALICE, 1_000_000_000_000_000));
-
-		assert_noop!(Contests::contest_new(
-			RuntimeOrigin::signed(ALICE),
-			0,
+		Contests::update_contest(
+			RuntimeOrigin::singed(ALICE),
+			0.into(),
 			title,
+			description,
+			contest_end_date
+		);
+
+		System::assert_last_event(Event::ContestUpdated { who: ALICE, contest_id: 0, title, description, contest_end_date }.into())
+	});
+}
+
+#[test]
+fn create_entry_sucessfull() {
+	new_test_ext().execute_with(|| {
+		create_contest();
+
+		Constests::create_contest_entry(
+			RuntimeOrigin::signed(BOB),
 			0,
-			100,
-			2,
-			token_symbol,
-			contest_end_date,
-			description
-		), Error::<Test>::PrizeTokenWinnerTooSmall);
+			10
+		);
+
+		System::assert_last_event(Event::EntryCreated { who: BOB, contest_id: 0, entry: 10 }.into());
+	});
+}
+
+#[test]
+fn assign_contest_winner() {
+	new_test_ext().execute_with(|| {
+		create_contest();
+
 		
+
+		System::assert_last_event(Event::ContestWinnerAssigned { contest_id: 0, winner: BOB, prize: 50.into() }.into());
 	});
 }
