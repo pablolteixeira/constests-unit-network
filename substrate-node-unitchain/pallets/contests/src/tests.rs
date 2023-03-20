@@ -122,12 +122,35 @@ fn create_entry_sucessfull() {
 }
 
 #[test]
-fn assign_contest_winner() {
+fn assign_contest_winner_sucessfull() {
 	new_test_ext().execute_with(|| {
 		create_contest();
 
-		
+		Constests::create_contest_entry(
+			RuntimeOrigin::signed(BOB),
+			0,
+			10
+		);
+
+		Contests::assign_contest_winner(
+			RuntimeOrigin::signed(ALICE),
+			10
+		);
 
 		System::assert_last_event(Event::ContestWinnerAssigned { contest_id: 0, winner: BOB, prize: 50.into() }.into());
 	});
+}
+
+#[test]
+fn close_contest_sucessfull() {
+	new_test_ext().execute_with(|| {
+		create_contest();
+
+		Contests::close_contest(
+			RuntimeOrigin::signed(ALICE),
+			0
+		);
+
+		System::assert_last_event(Event::ContestClosed { who: ALICE, contest_id: 0 }.into());
+	}); 
 }
